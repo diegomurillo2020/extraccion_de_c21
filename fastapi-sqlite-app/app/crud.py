@@ -1,6 +1,6 @@
-# app/crud.py
-
 from sqlalchemy.orm import Session
+# 🚨 Importar la función 'insert' y el dialecto de sqlite
+from sqlalchemy.dialects.sqlite import insert 
 from . import models, schemas
 
 # 🆕 Importación de Pandas para el tipo DataFrame
@@ -22,17 +22,15 @@ def create_registro(db: Session, registro: schemas.RegistroCreate):
     return db_registro
 
 # -----------------------------------------------------------
-# 🆕 FUNCIÓN DE CARGA MASIVA (BULK) DESDE DATAFRAME
+# 🔄 FUNCIÓN DE CARGA MASIVA (BULK) CORREGIDA con Anti-Duplicados
 # -----------------------------------------------------------
 
 def bulk_create_registros(db: Session, df: pd.DataFrame):
     """
-    Inserta múltiples registros en la BD desde un DataFrame de Pandas.
+    Inserta múltiples registros en la BD desde un DataFrame de Pandas,
+    ignorando silenciosamente los duplicados basados en (n_factura, rubro).
     """
     # 1. Renombrar las columnas del DataFrame a los nombres de snake_case del modelo
-    # Esto es crucial para que coincida con tu modelo de SQLAlchemy
-    # NOTA: Los nombres de columna deben coincidir exactamente con los del CSV subido,
-    # y deben estar en el orden esperado por este código.
     df.columns = [
         "id", "usuario", "n_factura", "fecha_factura", "ref_bancaria", 
         "carnet", "nombres", "rubro", "cod_pago", "detalle", 
@@ -41,14 +39,29 @@ def bulk_create_registros(db: Session, df: pd.DataFrame):
     ]
     
     # 2. Convertir el DataFrame en una lista de diccionarios
-    # .to_dict('records') crea la lista de objetos que SQLAlchemy puede entender
     registros_data = df.to_dict('records')
 
-    # 3. Crear los objetos modelo y añadirlos a la sesión
-    # NOTA: Se usa .bulk_save_objects para una inserción eficiente
-    db_registros = [models.RegistroContable(**data) for data in registros_data]
+    # 3. Definir la estrategia de inserción con manejo de conflictos
+    # La clave de esto es usar la instrucción INSERT con on_conflict_do_nothing
     
-    db.bulk_save_objects(db_registros)
-    db.commit()
+    # Crea la sentencia INSERT con los valores
+    stmt = insert(models.RegistroContable).values(registros_data)
     
-    return len(db_registros)
+    # 🚨 Añade la directiva de conflicto: IGNORAR DUPLICADOS 🚨
+    # Esto usa la restricción UniqueConstraint definida en el modelo.
+    stmt = stmt.on_conflict_do_nothing() 
+    
+    # 4. Ejecutar la inserción masiva
+    try:
+        # Ejecuta la sentencia que insertará solo las filas no duplicadas
+        result = db.execute(stmt)
+        db.commit()
+        
+        # En SQLite, el número de filas *realmente* insertadas es difícil de obtener
+        # con DO NOTHING, por lo que retornamos el total de filas que se intentaron procesar.
+        return len(registros_data)
+        
+    except Exception as e:
+        db.rollback()
+        # Relanzar el error para que sea manejado por el router
+        raise e
