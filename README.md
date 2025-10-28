@@ -1,2 +1,3 @@
 # extraccion_de_c21
-este codigo me sirv para la extraccion de c21 a partir de un excel
+este codigo sirve para la extracccion de el c-21 a partir de un archivo csv
+
