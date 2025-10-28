@@ -1,33 +1,31 @@
 from pydantic import BaseModel
+from datetime import date
 
-# 1. Esquema Base: Propiedades comunes para creación y lectura
-class ItemBase(BaseModel):
-    title: str
-    description: str | None = None
+# 🆕 Esquemas para RegistroContable
 
-# 2. Esquema de Creación: Usado para validar la data que llega por POST
-class ItemCreate(ItemBase):
+class RegistroBase(BaseModel):
+    usuario: str
+    n_factura: str
+    fecha_factura: str 
+    ref_bancaria: str
+    carnet: str
+    nombres: str
+    rubro: str
+    cod_pago: str
+    detalle: str | None = None
+    monto_total: float
+    objeto: str | None = None
+    volteos: str | None = None
+    monto_siscom: float
+    monto_extracto: float
+    diferencia_monto: float
+    observacion: str | None = None
+
+class RegistroCreate(RegistroBase):
     pass
 
-# 3. Esquema de Respuesta: Usado para serializar la data que sale de la API (incluye el ID)
-class Item(ItemBase):
-    id: int
-
-    class Config:
-        # Permite que Pydantic lea la data como un objeto ORM de SQLAlchemy
-        from_attributes = True
-
-class UserBase(BaseModel):
-    email: str
-    is_active: bool | None = True
-
-# Esquema para crear un User (requiere password)
-class UserCreate(UserBase):
-    password: str
-
-# Esquema de Respuesta para User (nunca devolvemos el password)
-class User(UserBase):
-    id: int
+class Registro(RegistroBase):
+    id: int # El ID de la tabla
 
     class Config:
         from_attributes = True

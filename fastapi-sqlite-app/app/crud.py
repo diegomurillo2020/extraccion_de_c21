@@ -1,53 +1,54 @@
+# app/crud.py
+
 from sqlalchemy.orm import Session
 from . import models, schemas
 
-# 1. Función para obtener un item por ID
-def get_item(db: Session, item_id: int):
-    return db.query(models.Item).filter(models.Item.id == item_id).first()
+# 🆕 Importación de Pandas para el tipo DataFrame
+import pandas as pd 
 
-# 2. Función para obtener todos los items
-def get_items(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Item).offset(skip).limit(limit).all()
+# --- Funciones CRUD para RegistroContable ---
 
-# 3. Función para crear un item
-def create_item(db: Session, item: schemas.ItemCreate):
-    db_item = models.Item(title=item.title, description=item.description)
-    db.add(db_item)
-    db.commit() # Guardar los cambios
-    db.refresh(db_item) # Actualizar el objeto con el ID generado
-    return db_item
+def get_registro(db: Session, registro_id: int):
+    return db.query(models.RegistroContable).filter(models.RegistroContable.id == registro_id).first()
 
-# 4. Función para eliminar un item (Opcional)
-def delete_item(db: Session, item_id: int):
-    db_item = db.query(models.Item).filter(models.Item.id == item_id).first()
-    if db_item:
-        db.delete(db_item)
-        db.commit()
-        return db_item
-    return None
+def get_registros(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(models.RegistroContable).offset(skip).limit(limit).all()
 
-# 🆕 Funciones CRUD de User
-
-def get_user(db: Session, user_id: int):
-    return db.query(models.User).filter(models.User.id == user_id).first()
-
-def get_user_by_email(db: Session, email: str):
-    return db.query(models.User).filter(models.User.email == email).first()
-
-def get_users(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.User).offset(skip).limit(limit).all()
-
-def create_user(db: Session, user: schemas.UserCreate):
-    # En un proyecto real, usarías bcrypt o argon2 para hashear el password.
-    # Usamos un simple prefijo para simular el hasheo.
-    fake_hashed_password = user.password + "notreallyhashed" 
-    
-    db_user = models.User(
-        email=user.email, 
-        hashed_password=fake_hashed_password,
-        is_active=user.is_active
-    )
-    db.add(db_user)
+def create_registro(db: Session, registro: schemas.RegistroCreate):
+    db_registro = models.RegistroContable(**registro.model_dump())
+    db.add(db_registro)
     db.commit()
-    db.refresh(db_user)
-    return db_user
+    db.refresh(db_registro)
+    return db_registro
+
+# -----------------------------------------------------------
+# 🆕 FUNCIÓN DE CARGA MASIVA (BULK) DESDE DATAFRAME
+# -----------------------------------------------------------
+
+def bulk_create_registros(db: Session, df: pd.DataFrame):
+    """
+    Inserta múltiples registros en la BD desde un DataFrame de Pandas.
+    """
+    # 1. Renombrar las columnas del DataFrame a los nombres de snake_case del modelo
+    # Esto es crucial para que coincida con tu modelo de SQLAlchemy
+    # NOTA: Los nombres de columna deben coincidir exactamente con los del CSV subido,
+    # y deben estar en el orden esperado por este código.
+    df.columns = [
+        "id", "usuario", "n_factura", "fecha_factura", "ref_bancaria", 
+        "carnet", "nombres", "rubro", "cod_pago", "detalle", 
+        "monto_total", "objeto", "volteos", "monto_siscom", 
+        "monto_extracto", "diferencia_monto", "observacion"
+    ]
+    
+    # 2. Convertir el DataFrame en una lista de diccionarios
+    # .to_dict('records') crea la lista de objetos que SQLAlchemy puede entender
+    registros_data = df.to_dict('records')
+
+    # 3. Crear los objetos modelo y añadirlos a la sesión
+    # NOTA: Se usa .bulk_save_objects para una inserción eficiente
+    db_registros = [models.RegistroContable(**data) for data in registros_data]
+    
+    db.bulk_save_objects(db_registros)
+    db.commit()
+    
+    return len(db_registros)

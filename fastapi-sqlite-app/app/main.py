@@ -1,20 +1,17 @@
 from fastapi import FastAPI
-from . import models
 from .database import engine
-from .routers import items  # 🆕 Router de Items
-from .routers import users  # Router de Users (asumiendo que lo creaste)
+from . import models
+from .routers import registro # 🆕 Importar el nuevo router
 
-# 1. Crear las tablas al iniciar la app (si no existen)
+# 1. Crear las tablas (incluida RegistroContable)
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Mi Aplicación FastAPI Modular") # Opcional: añade título
+app = FastAPI(title="API de Registros Contables")
 
 # 2. Incluir Routers
-app.include_router(items.router)
-app.include_router(users.router) # Si no existe, puedes comentarla por ahora
+app.include_router(registro.router)
 
-# 3. Ruta Raíz única
+# 3. Ruta Raíz
 @app.get("/", tags=["Root"])
 def read_root():
-    """Endpoint de bienvenida."""
-    return {"message": "¡Bienvenido! API en arquitectura modular con Items y Users"}
+    return {"message": "API lista. Explora /docs para ver los endpoints de Registros Contables."}

@@ -1,19 +1,24 @@
-# app/models.py
-from sqlalchemy import Column, Integer, String, Boolean # ⬅️ ¡Añadir Boolean aquí!
+from sqlalchemy import Column, Integer, String, Float, Date
 from .database import Base
 
-# Clase que representa la tabla 'items'
-class Item(Base):
-    __tablename__ = "items"
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, index=True)
-    description = Column(String, index=True)
+class RegistroContable(Base):
+    __tablename__ = "registros_contables"
 
-# Clase que representa la tabla 'users'
-class User(Base):
-    __tablename__ = "users"
-
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
-    is_active = Column(Boolean, default=True) # ✅ Ahora 'Boolean' está definido.
+    # Columnas basadas en la imagen (ajustadas a nombres snake_case)
+    id = Column(Integer, primary_key=True, index=True, name="N°")
+    usuario = Column(String, index=True)
+    n_factura = Column(String)
+    fecha_factura = Column(String) # Usar String por la dificultad de parsear Date en SQLite sin librerias extra
+    ref_bancaria = Column(String)
+    carnet = Column(String)
+    nombres = Column(String)
+    rubro = Column(String)
+    cod_pago = Column(String)
+    detalle = Column(String)
+    monto_total = Column(Float)
+    objeto = Column(String)
+    volteos = Column(String)
+    monto_siscom = Column(Float)
+    monto_extracto = Column(Float)
+    diferencia_monto = Column(Float)
+    observacion = Column(String)
